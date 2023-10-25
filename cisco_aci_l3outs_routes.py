@@ -46,25 +46,10 @@ import requests
 import urllib3
 
 
-class ModPyTricia(PyTricia):
-    """Modified PyTricia class with a class method as an alt-constructor"""
-
-    def __init__(self, ip_bits: int) -> None:
-        """Constructor"""
-
-        super().__init__(ip_bits)
-
-    @classmethod
-    def from_urib(cls, urib: str) -> PyTricia:
-        """Instantiate PyTricia object based on uRIB version"""
-
-        ip_bits = 32 if urib == "uribv4" else 128
-        return cls(ip_bits)
-
-
 class ACIConnect:
     """
-    A Context Manager that handles APIC login & logout operations
+    A REST API connection-handler for Cisco APIC that manages HTTPS session
+    establishment and termination.
 
     Provides two REST API GET methods
         1) GET Managed Objs by their Class
@@ -75,8 +60,9 @@ class ACIConnect:
         """Constructor"""
 
         self.device = device
+        self.username = username
+        self.password = password
         self.apic_cookies = {}
-        self.json_creds = json.dumps({"aaaUser": {"attributes": {"name": username, "pwd": password}}})
 
     def __enter__(self):
         """Connect to APIC"""
@@ -89,7 +75,13 @@ class ACIConnect:
 
         self.apic_logout()
 
-    @staticmethod
+    @property
+    def json_creds(self) -> str:
+        """Prepare credentials to be used as JSON object"""
+
+        return json.dumps(
+            {"aaaUser": {"attributes": {"name": self.username, "pwd": self.password}}})
+
     def login_exceptions_handler(func):
         """Decorator function for handling HTTP/login exceptions"""
         def wrapper_func(*args):
@@ -120,9 +112,12 @@ class ACIConnect:
         """POST logout request"""
 
         logout_uri = f"https://{self.device}/api/aaaLogout.json"
-        requests.post(logout_uri, data=self.json_creds, cookies=self.apic_cookies, verify=False, timeout=10)
+        requests.post(logout_uri, cookies=self.apic_cookies, verify=False, timeout=10)
 
-    def get_managed_objs_by_class(self, mo_class: str, query_filter: Optional[str] = None) -> List[Dict]:
+    def get_managed_objs_by_class(
+            self,
+            mo_class: str,
+            query_filter: Optional[str] = None) -> List[Dict]:
         """Returns a list of managed objects dictionaries of a given MO Class"""
 
         logging.info(f"GET Managed Objs of Class: {mo_class}")
@@ -134,7 +129,10 @@ class ACIConnect:
         managed_objs: List[Dict] = get_reply["imdata"]
         return managed_objs
 
-    def get_managed_objs_by_dn(self, dn: str, query_filter: Optional[str] = None) -> List[Dict]:
+    def get_managed_objs_by_dn(
+            self,
+            dn: str,
+            query_filter: Optional[str] = None) -> List[Dict]:
         """Returns a list of Managed Objects dictionaries of a given DN"""
 
         uri = f"https://{self.device}/api/mo/{dn}.json"
@@ -144,6 +142,25 @@ class ACIConnect:
         get_reply: Dict = get_request.json()
         managed_objs: List[Dict] = get_reply["imdata"]
         return managed_objs
+
+
+class ModPyTricia(PyTricia):
+    """
+    Modified PyTricia class (CIDR-Trie data structure) with a class method as
+    an alt-constructor.
+    """
+
+    def __init__(self, ip_bits: int) -> None:
+        """Explicit super constructor call for clarity"""
+
+        super().__init__(ip_bits)
+
+    @classmethod
+    def from_urib(cls, urib: str) -> PyTricia:
+        """Instantiate PyTricia object based on uRIB version"""
+
+        ip_bits = 32 if urib == "uribv4" else 128
+        return cls(ip_bits)
 
 
 class L3OutRouting:
@@ -288,7 +305,7 @@ class L3OutRouting:
             """Checks whether exit-interface is non-local and is routable"""
 
             return not (intf.startswith("lo") or intf == "null0" or intf_type in ("local", "am", "broadcast"))
-
+    
         for urib in ["uribv4", "uribv6"]:
             nh_resolver = ModPyTricia.from_urib(urib)
             unknown_routes: DefaultDict[str, Set[str]] = defaultdict(set)
