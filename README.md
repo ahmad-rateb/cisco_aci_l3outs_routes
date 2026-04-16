@@ -8,7 +8,7 @@ Collects routable prefixes via each L3Out in a given Tenant:VRF. By having route
 - `--device` for Cisco APIC Hostname/IP
 - `--tenant` for Tenant name
 - `--vrf` for VRF name
-- `--log` Enable informational-level logging (optional)
+- `--log` Enable info logging (optional)
 
 ## User Input
 
@@ -38,12 +38,11 @@ Collects routable prefixes via each L3Out in a given Tenant:VRF. By having route
 ## Required Python Modules
 
 - requests
-- pytricia
 
 ## Python Modules Installation
 
 ```bash
-$ pip3 install -r requirements.txt
+pip install -r requirements.txt
 ```
 
 ## How to use
@@ -51,8 +50,8 @@ $ pip3 install -r requirements.txt
 Run the script and provide the arguments followed by the Password as mentioned in the 'Input Arguments' and 'User Input' sections above
 
 ```bash
-$ python3 cisco_aci_l3outs_routes.py --username your_username --device hostname_or_ip --tenant tenant_name --vrf vrf_name [--log]
+python cisco_aci_l3outs_routes.py --username your_username --device hostname_or_ip --tenant tenant_name --vrf vrf_name [--log]
 Password:
 ```
 
-> Script was developed in Python 3.10. Minimum required version is Python 3.7.
+> Script was developed in Python 3.10. Minimum required version is Python 3.6.
